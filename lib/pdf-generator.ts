@@ -36,6 +36,19 @@ interface ProtocolData {
   conclusion: string;
 }
 
+// Funkce pro konverzi českých znaků do WinAnsi kódování
+function toWinAnsi(text: string): string {
+  const replacements: { [key: string]: string } = {
+    'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i',
+    'ň': 'n', 'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u',
+    'ů': 'u', 'ý': 'y', 'ž': 'z',
+    'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I',
+    'Ň': 'N', 'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U',
+    'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z'
+  };
+  return text.split('').map(char => replacements[char] || char).join('');
+}
+
 export async function generateProtocolPDF(data: ProtocolData) {
   try {
     const pdfDoc = await PDFDocument.create();
@@ -50,19 +63,6 @@ export async function generateProtocolPDF(data: ProtocolData) {
     const gray = rgb(0.4, 0.4, 0.4);
     const lightGray = rgb(0.9, 0.9, 0.9);
     const blue = rgb(0.2, 0.4, 0.8);
-
-    // Funkce pro konverzi českých znaků do WinAnsi kódování
-    const toWinAnsi = (text: string): string => {
-      const replacements: { [key: string]: string } = {
-        'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i',
-        'ň': 'n', 'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u',
-        'ů': 'u', 'ý': 'y', 'ž': 'z',
-        'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I',
-        'Ň': 'N', 'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U',
-        'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z'
-      };
-      return text.split('').map(char => replacements[char] || char).join('');
-    };
 
     // Helper funkce pro bezpečné vykreslení textu
     const safeDrawText = (page: PDFPage, text: string, options: any) => {
@@ -1115,7 +1115,8 @@ function wrapText(text: string, maxWidth: number, font: PDFFont, fontSize: numbe
 
   words.forEach(word => {
     const testLine = currentLine + (currentLine ? ' ' : '') + word;
-    const width = font.widthOfTextAtSize(testLine, fontSize);
+    // Konvertujeme text před měřením šířky, aby WinAnsi encoding fungoval
+    const width = font.widthOfTextAtSize(toWinAnsi(testLine), fontSize);
 
     if (width > maxWidth && currentLine) {
       lines.push(currentLine);
