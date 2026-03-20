@@ -51,6 +51,33 @@ export async function generateProtocolPDF(data: ProtocolData) {
     const lightGray = rgb(0.9, 0.9, 0.9);
     const blue = rgb(0.2, 0.4, 0.8);
 
+    // Funkce pro konverzi českých znaků do WinAnsi kódování
+    const toWinAnsi = (text: string): string => {
+      const replacements: { [key: string]: string } = {
+        'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i',
+        'ň': 'n', 'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u',
+        'ů': 'u', 'ý': 'y', 'ž': 'z',
+        'Á': 'A', 'Č': 'C', 'Ď': 'D', 'É': 'E', 'Ě': 'E', 'Í': 'I',
+        'Ň': 'N', 'Ó': 'O', 'Ř': 'R', 'Š': 'S', 'Ť': 'T', 'Ú': 'U',
+        'Ů': 'U', 'Ý': 'Y', 'Ž': 'Z'
+      };
+      return text.split('').map(char => replacements[char] || char).join('');
+    };
+
+    // Helper funkce pro bezpečné vykreslení textu
+    const safeDrawText = (page: PDFPage, text: string, options: any) => {
+      page.drawText(toWinAnsi(text), options);
+    };
+
+    // Wrap všechny stránky, aby drawText automaticky používal toWinAnsi
+    const wrapPage = (page: PDFPage) => {
+      const originalDrawText = page.drawText.bind(page);
+      page.drawText = (text: string, options?: any) => {
+        originalDrawText(toWinAnsi(text), options);
+      };
+      return page;
+    };
+
     // ========== FUNKCE PRO HLAVIČKU ==========
     const addHeader = (page: PDFPage, pageNumber: number) => {
       const { width, height } = page.getSize();
@@ -66,7 +93,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
       });
 
       // Text hlavičky
-      page.drawText('Akustická laboratoř', {
+      safeDrawText(page, 'Akusticka laborator', {
         x: 250,
         y: height - 50,
         size: 14,
@@ -74,7 +101,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
         color: black,
       });
 
-      page.drawText('Autorizovaná dle zákona č. 258/2000 Sb., ve znění pozdějších předpisů', {
+      safeDrawText(page, 'Autorizovana dle zakona c. 258/2000 Sb., ve zneni pozdejsich predpisu', {
         x: 150,
         y: height - 65,
         size: 8,
@@ -82,7 +109,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
         color: gray,
       });
 
-      page.drawText('Akulab s.r.o., Kavriánov 417/417, 683 52 Šaratice', {
+      safeDrawText(page, 'Akulab s.r.o., Kavrianon 417/417, 683 52 Saratice', {
         x: 170,
         y: height - 75,
         size: 8,
@@ -90,7 +117,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
         color: black,
       });
 
-      page.drawText('www.akulab.cz, e-mail: akulab@akulab.cz, tel.: 606 641 521', {
+      safeDrawText(page, 'www.akulab.cz, e-mail: akulab@akulab.cz, tel.: 606 641 521', {
         x: 155,
         y: height - 85,
         size: 8,
@@ -99,7 +126,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
       });
 
       // Zápatí
-      page.drawText(`Protokol o měření hluku č. ${data.protocolNumber}`, {
+      safeDrawText(page, `Protokol o mereni hluku c. ${data.protocolNumber}`, {
         x: 40,
         y: 30,
         size: 8,
@@ -107,7 +134,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
         color: black,
       });
 
-      page.drawText(`Strana ${pageNumber} z 8`, {
+      safeDrawText(page, `Strana ${pageNumber} z 8`, {
         x: width - 100,
         y: 30,
         size: 8,
@@ -144,7 +171,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
           color: lightGray,
         });
 
-        page.drawText(header, {
+        safeDrawText(page, header, {
           x: currentX + cellPadding,
           y: currentY + rowHeight / 2 - 3,
           size: fontSize,
@@ -172,7 +199,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
 
           const lines = cell.split('\n');
           lines.forEach((line, lineIndex) => {
-            page.drawText(line, {
+            safeDrawText(page, line, {
               x: currentX + cellPadding,
               y: currentY + rowHeight / 2 - 3 - (lineIndex * 10),
               size: fontSize - 1,
@@ -190,7 +217,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
     };
 
     // ========== STRANA 1 ==========
-    const page1 = pdfDoc.addPage([595.28, 841.89]); // A4
+    const page1 = wrapPage(pdfDoc.addPage([595.28, 841.89])); // A4
     addHeader(page1, 1);
     const { height: h1 } = page1.getSize();
 
@@ -402,7 +429,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
     });
 
     // ========== STRANA 2 - Značky, přístroje, normy ==========
-    const page2 = pdfDoc.addPage([595.28, 841.89]);
+    const page2 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page2, 2);
     const { height: h2 } = page2.getSize();
 
@@ -520,7 +547,7 @@ export async function generateProtocolPDF(data: ProtocolData) {
     });
 
     // ========== STRANA 3 - Měření ==========
-    const page3 = pdfDoc.addPage([595.28, 841.89]);
+    const page3 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page3, 3);
     const { height: h3 } = page3.getSize();
 
@@ -638,7 +665,7 @@ Zdroj hluku se vyznačuje ustáleným charakterem, přičemž v provozu bude nep
     );
 
     // ========== STRANA 4 - Místo měření (placeholder pro mapu) ==========
-    const page4 = pdfDoc.addPage([595.28, 841.89]);
+    const page4 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page4, 4);
     const { height: h4 } = page4.getSize();
 
@@ -694,7 +721,7 @@ Zdroj hluku se vyznačuje ustáleným charakterem, přičemž v provozu bude nep
     });
 
     // ========== STRANA 5 - Fotodokumentace ==========
-    const page5 = pdfDoc.addPage([595.28, 841.89]);
+    const page5 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page5, 5);
     const { height: h5 } = page5.getSize();
 
@@ -728,7 +755,7 @@ Zdroj hluku se vyznačuje ustáleným charakterem, přičemž v provozu bude nep
     });
 
     // ========== STRANA 6 - Výsledky měření ==========
-    const page6 = pdfDoc.addPage([595.28, 841.89]);
+    const page6 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page6, 6);
     const { height: h6 } = page6.getSize();
 
@@ -844,7 +871,7 @@ Zdroj hluku se vyznačuje ustáleným charakterem, přičemž v provozu bude nep
     });
 
     // ========== STRANA 7 - Tónová složka a výsledné hodnoty ==========
-    const page7 = pdfDoc.addPage([595.28, 841.89]);
+    const page7 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page7, 7);
     const { height: h7 } = page7.getSize();
 
@@ -934,7 +961,7 @@ Zdroj hluku se vyznačuje ustáleným charakterem, přičemž v provozu bude nep
     );
 
     // ========== STRANA 8 - Závěr ==========
-    const page8 = pdfDoc.addPage([595.28, 841.89]);
+    const page8 = wrapPage(pdfDoc.addPage([595.28, 841.89]));
     addHeader(page8, 8);
     const { height: h8 } = page8.getSize();
 
