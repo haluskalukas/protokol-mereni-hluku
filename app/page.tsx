@@ -121,8 +121,8 @@ export default function HomePage() {
     }));
   };
 
-  const handleGeneratePDF = () => {
-    generateProtocolPDF(formData);
+  const handleGeneratePDF = async () => {
+    await generateProtocolPDF(formData);
   };
 
   return (
